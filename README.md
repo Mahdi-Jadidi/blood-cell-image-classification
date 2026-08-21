@@ -1,40 +1,80 @@
+<div align="center">
+
 # Blood Cell Image Classification
 
-An applied computer-vision study for recognizing blood-cell classes from microscopy imagery. The project compares a dense neural baseline against a convolutional network, then asks the useful follow-up question: what image evidence is each model relying on?
+**Microscopy classification with model comparison, robustness testing, and visual explanations**
 
-## Why it matters
+[![CI](https://github.com/Mahdi-Jadidi/blood-cell-image-classification/actions/workflows/ci.yml/badge.svg)](https://github.com/Mahdi-Jadidi/blood-cell-image-classification/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-CNN%20%2B%20MLP-EE4C2C?logo=pytorch&logoColor=white)
 
-Blood-cell morphology is defined by local structure: nucleus shape, membrane boundaries, and granular texture. A classifier that only predicts a label is not enough for this domain, so this repository pairs model evaluation with error analysis and image-level interpretability.
+</div>
 
-## What was built
+## Overview
 
-- Deterministic `ImageFolder` data split and training pipeline for repeatable experiments.
-- Matched MLP and CNN baselines for a fair inductive-bias comparison.
-- Per-class metrics, confusion matrices, misclassification review, and training histories.
-- First-layer feature maps, geometric-robustness checks, and occlusion-sensitivity heatmaps.
+This project classifies blood-cell microscopy images and compares two fundamentally different neural baselines: a fully connected network that sees flattened pixels and a convolutional network that preserves spatial structure. The pipeline then investigates *why* the stronger model works through feature maps, geometric stress tests, error analysis, and occlusion sensitivity.
 
-## Main takeaways
+## Results
 
-The CNN provides the stronger visual baseline because it can learn local morphological patterns while the MLP must infer them from flattened pixels. The interpretability stage makes this claim inspectable: it shows whether model confidence changes around diagnostically meaningful cell regions rather than only reporting an aggregate score.
+| Model | Test accuracy | Interpretation |
+|---|---:|---|
+| MLP baseline | 91.70% | Strong global pixel baseline, limited spatial inductive bias |
+| CNN | **99.00%** | Learns local morphology and generalizes substantially better |
 
-## Architecture
+Evaluation used a held-out test set of 1,000 images. The 7.3-point gap supports the core hypothesis: local morphology matters for cell recognition.
 
-```text
-data -> deterministic split -> MLP/CNN training -> evaluation
-                                      -> error analysis -> feature maps/occlusion maps
+## What the project demonstrates
+
+- Fair MLP-versus-CNN comparison under the same deterministic data split.
+- Per-class precision, recall, F1, confusion matrix, and misclassification review.
+- First-layer activation maps for inspecting learned visual filters.
+- Rotation/flip robustness tests and occlusion maps for localizing influential regions.
+- Reproducible artifacts rather than notebook-only outputs.
+
+## Pipeline
+
+```mermaid
+flowchart LR
+    A[Microscopy images] --> B[Deterministic split]
+    B --> C1[MLP baseline]
+    B --> C2[CNN]
+    C1 --> D[Held-out evaluation]
+    C2 --> D
+    D --> E1[Confusion matrix]
+    D --> E2[Error analysis]
+    C2 --> E3[Feature maps and occlusion]
 ```
 
-The implementation lives in `src/blood_cell_classifier`, with dedicated data, training, evaluation, and interpretability modules.
+## Repository layout
 
-## Reproduce
+```text
+src/blood_cell_classifier/
+├── config.py             # experiment configuration
+├── data.py               # ImageFolder loading and splits
+├── models.py             # MLP and CNN definitions
+├── training.py           # optimization loop and checkpoints
+├── evaluation.py         # metrics and error analysis
+├── interpretability.py   # feature maps and occlusion sensitivity
+├── pipeline.py           # end-to-end orchestration
+└── cli.py                # command-line interface
+```
+
+## Quick start
 
 ```bash
+git clone https://github.com/Mahdi-Jadidi/blood-cell-image-classification.git
+cd blood-cell-image-classification
+python -m venv .venv
 pip install -e .
 blood-cell-classifier train --data-dir /path/to/dataset --output-dir outputs
 ```
 
-The dataset uses the standard ImageFolder layout: one directory per cell class. A run writes checkpoints, classification reports, confusion matrices, and compressed interpretability artifacts.
+The dataset must follow `torchvision.datasets.ImageFolder`: one folder per class. Use `--epochs 80` for the full experiment or `--skip-interpretability` for a training-only run.
 
-## Stack
+## Artifacts
 
-PyTorch, torchvision, scikit-learn, NumPy, and Pillow. GitHub Actions validates the package and model contract on every change.
+A successful run writes model checkpoints, training histories, classification reports, confusion matrices, error samples, and compressed interpretability arrays to the selected output directory.
+
+## Limitations
+
+The benchmark measures classification under the source dataset's imaging conditions. Before clinical use, external validation is required across laboratories, microscopes, staining protocols, demographic groups, and image-quality levels. This repository is a research implementation, not a diagnostic device.
